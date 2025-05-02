@@ -153,7 +153,8 @@ static int expected_base;                /* Lowest seqnum not yet delivered to l
 
 void B_input(struct pkt packet) {
   struct pkt ackpkt;
-  int i, seq;
+  int i, seq, window_end;
+  bool in_window;
 
   if (!IsCorrupted(packet)) {
     if (TRACE > 0)
@@ -162,10 +163,10 @@ void B_input(struct pkt packet) {
 
     seq = packet.seqnum;
 
-    int window_end = (expected_base + WINDOWSIZE) % SEQSPACE;
-    bool in_window = (expected_base <= window_end) ?
-                     (seq >= expected_base && seq < window_end) :
-                     (seq >= expected_base || seq < window_end);
+    window_end = (expected_base + WINDOWSIZE) % SEQSPACE;
+    in_window = (expected_base <= window_end) ?
+                (seq >= expected_base && seq < window_end) :
+                (seq >= expected_base || seq < window_end);
 
     if (in_window) {
       if (!received[seq]) {
@@ -175,7 +176,7 @@ void B_input(struct pkt packet) {
 
       while (received[expected_base]) {
         tolayer5(B, recv_buffer[expected_base].payload);
-        if (TRACE > 0)
+        if (TRACE > 1)
           printf("----B: delivered packet %d to application\n", expected_base);
         received[expected_base] = false;
         expected_base = (expected_base + 1) % SEQSPACE;
@@ -201,3 +202,4 @@ void B_init(void) {
 
 void B_output(struct msg message) {}
 void B_timerinterrupt(void) {}
+
