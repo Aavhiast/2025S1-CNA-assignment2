@@ -25,7 +25,7 @@
 #define RTT  16.0       /* round trip time.  MUST BE SET TO 16.0 when submitting assignment */
 #define WINDOWSIZE 6    /* the maximum number of buffered unacked packet
                           MUST BE SET TO 6 when submitting assignment */
-#define SEQSPACE 12      // 2 * Windowsize
+#define SEQSPACE 12      /* 2 * Windowsize */
 #define NOTINUSE (-1)   /* used to fill header fields that are not being used */
 
 /* generic procedure to compute the checksum of a packet.  Used by both sender and receiver
@@ -36,7 +36,8 @@
 
 int ComputeChecksum(struct pkt packet) {
   int checksum = packet.seqnum + packet.acknum;
-  for (int i = 0; i < 20; i++) checksum += (int)(packet.payload[i]);
+  int i;
+  for (i = 0; i < 20; i++) checksum += (int)(packet.payload[i]);
   return checksum;
 }
 
@@ -45,11 +46,11 @@ bool IsCorrupted(struct pkt packet) {
 }
 
 /********* Sender (A) Selective Repeat ************/
-static struct pkt buffer[SEQSPACE];      // Store packets which were sent but not been acknowledged
-static bool acked[SEQSPACE];             // Record which packets have been ACKed
-static bool used[SEQSPACE];              // Mark valid packets
-static int base;                         // Minimum window number
-static int nextseqnum;                   // Nextseqnum need to be sent
+static struct pkt buffer[SEQSPACE];      /* Store packets which were sent but not been acknowledged */
+static bool acked[SEQSPACE];             /* Record which packets have been ACKed */
+static bool used[SEQSPACE];              /* Mark valid packets */
+static int base;                         /* Minimum window number */
+static int nextseqnum;                   /* Nextseqnum need to be sent */
 
 /* called from layer 5 (application layer), passed the message to be sent to other side */
 void A_output(struct msg message) {
@@ -155,9 +156,10 @@ void A_timerinterrupt(void) {
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */
 void A_init(void) {
+  int i;
   base = 0;
   nextseqnum = 0;
-  for (int i = 0; i < SEQSPACE; i++) {
+  for (i = 0; i < SEQSPACE; i++) {
     acked[i] = false;
     used[i] = false;
   }
@@ -165,9 +167,9 @@ void A_init(void) {
 
 /********* Receiver (B)  variables and procedures ************/
 
-static struct pkt recv_buffer[SEQSPACE];  // Receiver packet buffer 
-static bool received[SEQSPACE];          // Mark if packet with seqnum was received 
-static int expected_base;                // Lowest seqnum not yet delivered to layer 5 
+static struct pkt recv_buffer[SEQSPACE];  /* Receiver packet buffer */
+static bool received[SEQSPACE];          /* Mark if packet with seqnum was received */
+static int expected_base;                /* Lowest seqnum not yet delivered to layer 5 */
 
 /* called from layer 3, when a packet arrives for layer 4 at B*/
 void B_input(struct pkt packet) {
@@ -198,7 +200,7 @@ void B_input(struct pkt packet) {
       while (received[expected_base]) {
         tolayer5(B, recv_buffer[expected_base].payload);
         if (TRACE > 0)
-          printf("----B: delivered packet %d to application\n", expected_base);
+          /* printf("----B: delivered packet %d to application\n", expected_base); */
         received[expected_base] = false;
         expected_base = (expected_base + 1) % SEQSPACE;
       }
@@ -219,8 +221,9 @@ void B_input(struct pkt packet) {
 /* the following routine will be called once (only) before any other */
 /* entity B routines are called. You can use it to do any initialization */
 void B_init(void) {
+  int i;
   expected_base = 0;
-  for (int i = 0; i < SEQSPACE; i++) received[i] = false;
+  for (i = 0; i < SEQSPACE; i++) received[i] = false;
 }
 
 /******************************************************************************
