@@ -114,22 +114,18 @@ void A_input(struct pkt packet) {
 }
 
 void A_timerinterrupt(void) {
-  int i, oldest = -1;
+  int i;
+
   if (TRACE == 1)
     printf("----A: time out,resend packets!\n");
 
   for (i = 0; i < SEQSPACE; i++) {
     if (used[i] && !acked[i]) {
-      oldest = i;
-      break;
+      if (TRACE == 1)
+        printf("---A: resending packet %d\n", buffer[i].seqnum);
+      tolayer3(A, buffer[i]);
+      packets_resent++;
     }
-  }
-
-  if (oldest != -1) {
-    if (TRACE == 1)
-      printf("---A: resending packet %d\n", buffer[oldest].seqnum);
-    tolayer3(A, buffer[oldest]);
-    packets_resent++;
   }
 
   starttimer(A, RTT);
