@@ -63,7 +63,7 @@ void A_output(struct msg message) {
     used[nextseqnum] = true;
     acked[nextseqnum] = false;
 
-    if (TRACE == 1)
+    if (TRACE > 0)
       printf("Sending packet %d to layer 3\n", sendpkt.seqnum);
     tolayer3(A, sendpkt);
 
@@ -72,7 +72,7 @@ void A_output(struct msg message) {
 
     nextseqnum = (nextseqnum + 1) % SEQSPACE;
   } else {
-    if (TRACE == 1)
+    if (TRACE > 0)
       printf("----A: New message arrives, send window is full\n");
     window_full++;
   }
@@ -82,15 +82,15 @@ void A_input(struct pkt packet) {
   int ack;
 
   if (!IsCorrupted(packet)) {
-    if (TRACE == 1)
-      printf("----A: uncorrupted ACK %d is received\n", packet.acknum);
+    if (TRACE > 0)
+      printf("----A: uncorrupted ACK %d is received\n",packet.acknum);
     total_ACKs_received++;
 
     ack = packet.acknum;
 
     if (!acked[ack] && used[ack]) {
-      if (TRACE == 1)
-        printf("----A: ACK %d is not a duplicate\n", ack);
+      if (TRACE > 0)
+        printf("----A: ACK %d is not a duplicate\n",packet.acknum);
       new_ACKs++;
       acked[ack] = true;
 
@@ -104,25 +104,26 @@ void A_input(struct pkt packet) {
       if (base != nextseqnum)
         starttimer(A, RTT);
     } else {
-      if (TRACE == 1)
-        printf("----A: duplicate ACK received, do nothing!\n");
+      if (TRACE > 0)
+        printf ("----A: duplicate ACK received, do nothing!\n");
+        
     }
   } else {
-    if (TRACE == 1)
-      printf("----A: corrupted ACK is received, do nothing!\n");
+    if (TRACE > 0)
+      printf ("----A: corrupted ACK is received, do nothing!\n");
   }
 }
 
 void A_timerinterrupt(void) {
   int i;
 
-  if (TRACE == 1)
+  if (TRACE > 0)
     printf("----A: time out,resend packets!\n");
 
   for (i = 0; i < SEQSPACE; i++) {
     if (used[i] && !acked[i]) {
-      if (TRACE == 1)
-        printf("---A: resending packet %d\n", buffer[i].seqnum);
+      if (TRACE > 0)
+        printf ("---A: resending packet %d\n", (buffer[(windowfirst+i) % WINDOWSIZE]).seqnum);
       tolayer3(A, buffer[i]);
       packets_resent++;
     }
@@ -153,8 +154,8 @@ void B_input(struct pkt packet) {
   bool in_window;
 
   if (!IsCorrupted(packet)) {
-    if (TRACE == 1)
-      printf("----B: packet %d is correctly received, send ACK!\n", packet.seqnum);
+    if (TRACE > 0)
+      printf("----B: packet %d is correctly received, send ACK!\n",packet.seqnum);
     packets_received++;
 
     seq = packet.seqnum;
@@ -171,8 +172,6 @@ void B_input(struct pkt packet) {
 
       while (received[expected_base]) {
         tolayer5(B, recv_buffer[expected_base].payload);
-        if (TRACE > 1)
-          printf("----B: delivered packet %d to application\n", expected_base);
         received[expected_base] = false;
         expected_base = (expected_base + 1) % SEQSPACE;
       }
@@ -184,7 +183,7 @@ void B_input(struct pkt packet) {
     ackpkt.checksum = ComputeChecksum(ackpkt);
     tolayer3(B, ackpkt);
   } else {
-    if (TRACE == 1)
+    if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
   }
 }
