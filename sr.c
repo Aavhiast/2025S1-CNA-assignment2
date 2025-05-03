@@ -116,7 +116,7 @@ void A_input(struct pkt packet) {
 void A_timerinterrupt(void) {
   int i, oldest = -1;
   if (TRACE > 0)
-    printf("----A: time out, selectively resend oldest unacked packet!\n");
+    printf("----A: time out,resend packets!\n");  
 
   for (i = 0; i < SEQSPACE; i++) {
     if (used[i] && !acked[i]) {
@@ -162,7 +162,6 @@ void B_input(struct pkt packet) {
     packets_received++;
 
     seq = packet.seqnum;
-
     window_end = (expected_base + WINDOWSIZE) % SEQSPACE;
     in_window = (expected_base <= window_end) ?
                 (seq >= expected_base && seq < window_end) :
@@ -190,7 +189,7 @@ void B_input(struct pkt packet) {
     tolayer3(B, ackpkt);
   } else {
     if (TRACE > 0)
-      printf("----B: corrupted packet received, discard\n");
+      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");  
   }
 }
 
