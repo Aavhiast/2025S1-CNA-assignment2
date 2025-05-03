@@ -181,7 +181,7 @@ void B_input(struct pkt packet) {
       if (!received[seq]) {
         recv_buffer[seq] = packet;
         received[seq] = true;
-        
+
         if (seq == expected_base) {
           while (received[expected_base]) {
             tolayer5(B, recv_buffer[expected_base].payload);
@@ -193,30 +193,28 @@ void B_input(struct pkt packet) {
 
       ackpkt.acknum = seq;
       last_ack_sent = seq;
+      
+      ackpkt.seqnum = 0;
+      for (i = 0; i < 20; i++)
+        ackpkt.payload[i] = '0';
+      ackpkt.checksum = ComputeChecksum(ackpkt);
+      tolayer3(B, ackpkt);
     } else {
       if (TRACE > 0)
         printf("----B: packet %d is correctly received, send ACK!\n", seq);
       
       ackpkt.acknum = seq;
       last_ack_sent = seq;
+      
+      ackpkt.seqnum = 0;
+      for (i = 0; i < 20; i++)
+        ackpkt.payload[i] = '0';
+      ackpkt.checksum = ComputeChecksum(ackpkt);
+      tolayer3(B, ackpkt);
     }
   } else {
-    if (TRACE > 0)
-      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-
-    if (last_ack_sent != -1)
-      ackpkt.acknum = last_ack_sent;
-    else
-      ackpkt.acknum = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
   }
-
-  ackpkt.seqnum = 0;
-  for (i = 0; i < 20; i++)
-    ackpkt.payload[i] = '0';
-  ackpkt.checksum = ComputeChecksum(ackpkt);
-  tolayer3(B, ackpkt);
 }
-
 
 void B_init(void) {
   int i;
