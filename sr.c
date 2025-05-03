@@ -123,7 +123,7 @@ void A_timerinterrupt(void) {
   for (i = 0; i < SEQSPACE; i++) {
     if (used[i] && !acked[i]) {
       if (TRACE > 0)
-        printf ("---A: resending packet %d\n", (buffer[(windowfirst+i) % WINDOWSIZE]).seqnum);
+        printf ("---A: resending packet %d\n", buffer[i].seqnum);
       tolayer3(A, buffer[i]);
       packets_resent++;
     }
