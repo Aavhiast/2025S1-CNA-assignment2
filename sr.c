@@ -5,8 +5,11 @@
 #include "sr.h"
 
 /* ------------------------------------------------------------------ */
-/* STUB OUT THE missing nsimmax for local Stop-and-Wait emulator:     */
-/* this definition is weak so the autograder’s emulator.c will override it */
+extern int window_full;            /* messages dropped due to full window */
+extern int total_ACKs_received;    /* all (non-corrupt) ACKs seen at A */
+extern int new_ACKs;               /* non-duplicate ACKs seen at A */
+extern int packets_resent;         /* retransmissions from A */
+extern int packets_received;       /* correctly received packets at B */
 /* ------------------------------------------------------------------ */
 #ifdef __GNUC__
 __attribute__((weak)) int nsimmax = 0;
@@ -163,9 +166,9 @@ void B_input(struct pkt packet) {
                      : (seq >= expected_base || seq < window_end);
 
   if (!IsCorrupted(packet) && in_window) {
+    packets_received++;
     if (TRACE > 0)
       printf("----B: packet %d is correctly received, send ACK!\n", seq);
-    packets_received++;
 
     if (!received[seq]) {
       recv_buffer[seq] = packet;
@@ -176,20 +179,21 @@ void B_input(struct pkt packet) {
         expected_base = (expected_base + 1) % SEQSPACE;
       }
     }
+
     ackpkt.acknum = seq;
-  }
-  else {
+  } else {
     if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-    ackpkt.acknum = (expected_base == 0 ? SEQSPACE - 1 : expected_base - 1);
+    int last = (expected_base == 0 ? SEQSPACE - 1 : expected_base - 1);
+    ackpkt.acknum = last;
   }
 
   ackpkt.seqnum = 0;
-  for (i = 0; i < 20; i++)
-    ackpkt.payload[i] = '0';
+  for (i = 0; i < 20; i++) ackpkt.payload[i] = '0';
   ackpkt.checksum = ComputeChecksum(ackpkt);
   tolayer3(B, ackpkt);
 }
+
 
 void B_init(void) {
   int i;
