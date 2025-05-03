@@ -131,11 +131,14 @@ void A_timerinterrupt(void) {
   if (TRACE > 0)
     printf("----A: time out,resend packets!\n");
 
-  if (used[base] && !acked[base]) {
-    if (TRACE > 0)
-      printf("---A: resending packet %d\n", buffer[base].seqnum);
-    tolayer3(A, buffer[base]);
-    packets_resent++;
+  for (int i = 0; i < WINDOWSIZE; i++) {
+    int index = (base + i) % SEQSPACE;
+    if (used[index] && !acked[index]) {
+      if (TRACE > 0)
+        printf("---A: resending packet %d\n", buffer[index].seqnum);
+      tolayer3(A, buffer[index]);
+      packets_resent++;
+    }
   }
 
   starttimer(A, RTT);
@@ -152,44 +155,59 @@ void A_init(void) {
 }
 
 /********* Receiver (B)  variables and procedures ************/
-
 static struct pkt recv_buffer[SEQSPACE];  /* Receiver packet buffer */
 static bool received[SEQSPACE];           /* Mark if packet with seqnum was received */
 static int expected_base;                 /* Lowest seqnum not yet delivered to layer 5 */
+static int last_ack_sent = -1;            /* Most recent ACK sent */
 
 void B_input(struct pkt packet) {
   struct pkt ackpkt;
-  int i, seq = packet.seqnum;
+  int i;
+  int seq = packet.seqnum;
   int window_end = (expected_base + WINDOWSIZE) % SEQSPACE;
   bool in_window = (expected_base <= window_end)
                      ? (seq >= expected_base && seq < window_end)
                      : (seq >= expected_base || seq < window_end);
 
-  if (!IsCorrupted(packet) && in_window) {
-    packets_received++;
-    if (TRACE > 0)
-      printf("----B: packet %d is correctly received, send ACK!\n", seq);
+  if (!IsCorrupted(packet)) {
+    packets_received++;  
+    
+    if (in_window) {
+      if (TRACE > 0)
+        printf("----B: packet %d is correctly received, send ACK!\n", seq);
 
-    if (!received[seq]) {
-      recv_buffer[seq] = packet;
-      received[seq] = true;
-      while (received[expected_base]) {
-        tolayer5(B, recv_buffer[expected_base].payload);
-        received[expected_base] = false;
-        expected_base = (expected_base + 1) % SEQSPACE;
+      if (!received[seq]) {
+        recv_buffer[seq] = packet;
+        received[seq] = true;
+        while (received[expected_base]) {
+          tolayer5(B, recv_buffer[expected_base].payload);
+          received[expected_base] = false;
+          expected_base = (expected_base + 1) % SEQSPACE;
+        }
       }
-    }
 
-    ackpkt.acknum = seq;
+      ackpkt.acknum = seq;
+      last_ack_sent = seq;
+    } else {
+      if (TRACE > 0)
+        printf("----B: packet %d is correctly received, send ACK!\n", seq);
+        
+      ackpkt.acknum = seq;
+      last_ack_sent = seq;
+    }
   } else {
     if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
-    int last = (expected_base == 0 ? SEQSPACE - 1 : expected_base - 1);
-    ackpkt.acknum = last;
+
+    if (last_ack_sent != -1)
+      ackpkt.acknum = last_ack_sent;
+    else
+      ackpkt.acknum = (expected_base == 0) ? SEQSPACE - 1 : expected_base - 1;
   }
 
   ackpkt.seqnum = 0;
-  for (i = 0; i < 20; i++) ackpkt.payload[i] = '0';
+  for (i = 0; i < 20; i++)
+    ackpkt.payload[i] = '0';
   ackpkt.checksum = ComputeChecksum(ackpkt);
   tolayer3(B, ackpkt);
 }
@@ -198,9 +216,13 @@ void B_input(struct pkt packet) {
 void B_init(void) {
   int i;
   expected_base = 0;
+  last_ack_sent = -1;
   for (i = 0; i < SEQSPACE; i++)
     received[i] = false;
 }
 
-void B_output(struct msg message) {}
-void B_timerinterrupt(void) {}
+void B_output(struct msg message) {
+}
+
+void B_timerinterrupt(void) {
+}
